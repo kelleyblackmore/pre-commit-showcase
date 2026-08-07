@@ -25,10 +25,15 @@ obj/
 
 # Terraform
 .terraform/
-.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 crash.log
+# NOTE: .terraform.lock.hcl is deliberately NOT ignored. It is the dependency
+# lockfile for a root module and belongs in version control - it is what makes
+# `terraform init` reproducible, and what stops the generated provider-version
+# table in stacks/terraform/README.md from drifting on every provider release.
+# Generate hashes for every platform your team and CI use:
+#   terraform providers lock -platform=linux_amd64 -platform=darwin_arm64 -platform=windows_amd64
 
 # Helm
 charts/*.tgz

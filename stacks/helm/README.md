@@ -55,6 +55,14 @@ those comments are written in that specific style. Because the hook *modifies*
 files, its first run on a new chart fails and stages the new README — that is
 normal pre-commit behaviour, not an error.
 
+One consequence worth planning for: the generated README will not satisfy your
+Markdown linter, and you cannot fix it, because the generator rewrites the file
+on every run. Exclude generated output from the linter rather than fighting it —
+this repo does that in
+[`.markdownlint-cli2.yaml`](../../.markdownlint-cli2.yaml), and marks the file
+`linguist-generated` in [`.gitattributes`](../../.gitattributes) so it collapses
+in pull request diffs.
+
 **Never put version in `selectorLabels`.** A Deployment's `spec.selector` is
 immutable; if the app version is in there, the next `helm upgrade` fails with a
 field-is-immutable error. See

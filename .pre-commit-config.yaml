@@ -272,6 +272,12 @@ repos:
         # a `files:` key here would do nothing. Scope it with an explicit
         # project dir and path, or it wanders into the rest of the monorepo.
         args: [--project-dir, stacks/ansible, stacks/ansible]
+        # Upstream's manifest pins `language_version: python3.14`, which fails
+        # outright on any machine without that exact interpreter:
+        #   RuntimeError: failed to find interpreter for ... 'python3.14'
+        # ansible-lint itself only requires >=3.10, so use whatever python3 the
+        # developer (or the runner) actually has.
+        language_version: python3
         additional_dependencies:
           - ansible-core>=2.17
 

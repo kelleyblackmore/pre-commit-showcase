@@ -31,6 +31,12 @@ repos:
     rev: v26.6.0
     hooks:
       - id: ansible-lint
+        # Upstream's manifest pins `language_version: python3.14`. Without this
+        # override, anyone without that exact interpreter gets:
+        #   RuntimeError: failed to find interpreter for ... 'python3.14'
+        # ansible-lint's own requires-python is >=3.10, so pinning to a single
+        # minor version is stricter than the tool needs.
+        language_version: python3
         additional_dependencies:
           - ansible-core>=2.17
 
