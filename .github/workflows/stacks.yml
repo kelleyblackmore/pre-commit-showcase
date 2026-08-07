@@ -53,12 +53,12 @@ jobs:
         with:
           node-version: "22"
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         if: matrix.stack == 'csharp'
         with:
           dotnet-version: "8.0.x"
 
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
         if: matrix.stack == 'helm'
         with:
           version: v3.21.3
@@ -134,7 +134,7 @@ jobs:
       # Building it is a separate question, and belongs here rather than in a
       # commit hook.
       - name: Build the image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: stacks/container
           push: false
