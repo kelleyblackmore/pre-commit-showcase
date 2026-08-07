@@ -58,7 +58,7 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
         if: matrix.stack == 'helm'
         with:
           version: v3.21.3
