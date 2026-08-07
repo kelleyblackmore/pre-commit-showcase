@@ -142,6 +142,12 @@ jobs:
       - name: Run pre-commit
         run: pre-commit run --all-files --show-diff-on-failure --color=always
 
+      - name: Run the pre-push-stage hooks
+        # Whole-repo consistency checks. Named explicitly: a hook with no
+        # `stages:` key runs at every stage, so a bare `--hook-stage pre-push`
+        # would pointlessly re-run the entire pre-commit set.
+        run: pre-commit run --hook-stage pre-push readme-toc --all-files --color=always
+
       - name: Run the manual-stage hooks
         # Slow / networked hooks that are deliberately off the commit path.
         # Advisory: a new CVE in a transitive dependency should not turn the

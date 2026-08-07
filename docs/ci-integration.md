@@ -30,6 +30,35 @@ config there. Without this, the copy-pasteable configs would rot the first time
 someone edited only the root config, and nobody would notice until a reader
 tried to use one.
 
+## Run every stage in CI, not just `pre-commit`
+
+A hook parked at `pre-push` or `manual` is still a hook, and if CI only ever
+runs the default stage it rots quietly. The first person to actually type
+`pre-commit run --hook-stage manual` then discovers it has been broken for
+months — which is precisely the failure that made you move it off the commit
+path in the first place.
+
+Both workflows here exercise the other stages too. Name the hook explicitly:
+
+```bash
+pre-commit run --hook-stage manual clang-tidy --all-files
+```
+
+not
+
+```bash
+pre-commit run --hook-stage manual --all-files
+```
+
+because a hook with no `stages:` key runs at **every** stage — so the bare form
+re-runs your entire pre-commit set on top of the manual ones, which is slow and
+makes the log hard to read.
+
+Two of these hooks need setup that the commit path does not: `clang-tidy` needs
+a configured CMake build, and `kubeconform` needs its binary. That setup is the
+same thing a contributor does after cloning, so it lives in a
+`scripts/precommit-bootstrap.sh` per stack rather than only in the workflow.
+
 ## Things that will bite you
 
 ### `no-commit-to-branch` fails every CI run

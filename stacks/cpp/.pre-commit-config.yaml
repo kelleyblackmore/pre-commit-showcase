@@ -53,6 +53,8 @@ repos:
   # commit. Keep it manual/CI:
   #
   #     pre-commit run --hook-stage manual clang-tidy --all-files
+  #
+  # scripts/precommit-bootstrap.sh does that configure step for CI.
   # ---------------------------------------------------------------------------
   - repo: local
     hooks:

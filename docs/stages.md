@@ -1,5 +1,8 @@
 # Choosing a stage
 
+> For the wider picture — where the stages sit in a commit, and how a hook is
+> resolved and run — see [how-it-works.md](how-it-works.md).
+
 The most common way to fail at pre-commit is to put good checks at the wrong
 stage. Commits start taking 45 seconds, people discover `--no-verify`, and
 within a month the hooks are decorative.

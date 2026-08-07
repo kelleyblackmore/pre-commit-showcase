@@ -16,6 +16,10 @@ different stacks. That context is the point of this repo — the configs are
 commented at the level of "why this argument", not "this is the trailing
 whitespace hook".
 
+New to pre-commit? **[How pre-commit works](docs/how-it-works.md)** has the
+diagrams, a commit traced step by step, and an honest account of the benefits
+and the costs.
+
 ## The stacks
 
 | Stack | Hooks that matter | The thing that trips people up |
@@ -105,6 +109,8 @@ every commit in a repository. See
 
 ## Docs
 
+- **[How pre-commit works](docs/how-it-works.md)** — diagrams, a commit traced
+  end to end, and what you actually get out of it. Start here.
 - [Two patterns: root config vs per-stack config](docs/two-patterns.md)
 - [Choosing a stage: pre-commit, commit-msg, pre-push, manual](docs/stages.md)
 - [Writing and testing your own hooks](docs/writing-custom-hooks.md)
