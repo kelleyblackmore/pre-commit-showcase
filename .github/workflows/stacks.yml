@@ -63,16 +63,26 @@ jobs:
         with:
           version: v3.21.3
 
-      - name: Install helm-docs
+      - name: Install helm-docs and kubeconform
         if: matrix.stack == 'helm'
         run: |
           set -euxo pipefail
           bin="${HOME}/.local/bin"
           mkdir -p "${bin}"
+
           curl -fsSL "https://github.com/norwoodj/helm-docs/releases/download/v1.14.2/helm-docs_1.14.2_Linux_x86_64.tar.gz" -o /tmp/helm-docs.tgz
           tar -xzf /tmp/helm-docs.tgz -C "${bin}" helm-docs
-          chmod +x "${bin}/helm-docs"
+
+          # Needed by the pre-push-stage hook, exercised further down.
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz" -o /tmp/kubeconform.tgz
+          tar -xzf /tmp/kubeconform.tgz -C "${bin}" kubeconform
+
+          chmod +x "${bin}"/*
           echo "${bin}" >> "${GITHUB_PATH}"
+
+      - name: Install clang-tidy
+        if: matrix.stack == 'cpp'
+        run: sudo apt-get install -y --no-install-recommends clang-tidy
 
       - uses: hashicorp/setup-terraform@v3
         if: matrix.stack == 'terraform'
@@ -119,6 +129,43 @@ jobs:
 
       - name: Run the standalone config in an isolated repo
         run: ./scripts/run-stack.sh "${{ matrix.stack }}"
+
+      # ---------------------------------------------------------------------
+      # Hooks parked at pre-push / manual are still hooks. If CI only ever runs
+      # the pre-commit stage, they rot silently and the first person to run
+      # `pre-commit run --hook-stage manual` finds them broken.
+      #
+      # Each is named explicitly rather than running the whole stage, because a
+      # hook with no `stages:` key runs at EVERY stage - so a bare
+      # `--hook-stage manual` would re-run the entire pre-commit set as well.
+      # ---------------------------------------------------------------------
+      - name: Verify the pre-push hook
+        if: matrix.stack == 'csharp'
+        run: ./scripts/run-stack.sh csharp --hook-stage pre-push dotnet-build
+
+      - name: Verify the pre-push hook
+        if: matrix.stack == 'helm'
+        run: ./scripts/run-stack.sh helm --hook-stage pre-push kubeconform
+
+      - name: Verify the manual-stage hook
+        if: matrix.stack == 'cpp'
+        run: ./scripts/run-stack.sh cpp --hook-stage manual clang-tidy
+
+      - name: Verify the manual-stage hook
+        if: matrix.stack == 'terraform'
+        run: ./scripts/run-stack.sh terraform --hook-stage manual terraform_providers_lock
+
+      - name: Verify the manual-stage hook
+        if: matrix.stack == 'container'
+        run: ./scripts/run-stack.sh container --hook-stage manual checkov
+
+      - name: Verify the manual-stage hook
+        # Advisory only: pip-audit reports CVEs in published packages, so a
+        # disclosure in a transitive dependency would otherwise turn this repo
+        # red on a commit that changed nothing.
+        if: matrix.stack == 'python'
+        continue-on-error: true
+        run: ./scripts/run-stack.sh python --hook-stage manual pip-audit
 
   build-container:
     name: container image builds

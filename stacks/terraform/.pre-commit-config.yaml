@@ -62,8 +62,17 @@ repos:
 
       # Blocks `terraform apply` from ever seeing a lockfile that only records
       # hashes for your laptop's platform.
+      #
+      # The platforms MUST be listed explicitly. `terraform providers lock` with
+      # no -platform writes hashes for the current platform only, stripping
+      # everyone else's - so the hook rewrites the file on every machine it runs
+      # on and can never reach a fixed point.
       - id: terraform_providers_lock
         stages: [manual]
+        args:
+          - --args=-platform=linux_amd64
+          - --args=-platform=darwin_arm64
+          - --args=-platform=windows_amd64
 
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.4.0
