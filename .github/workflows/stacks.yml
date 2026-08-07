@@ -41,14 +41,14 @@ jobs:
           - terraform
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         id: setup-python
         with:
           python-version: "3.12"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: matrix.stack == 'javascript'
         with:
           node-version: "22"
@@ -107,7 +107,7 @@ jobs:
           ansible-galaxy collection install -r stacks/ansible/requirements.yml
 
       - name: Cache pre-commit environments
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ matrix.stack }}-${{ runner.os }}-${{ hashFiles(format('stacks/{0}/.pre-commit-config.yaml', matrix.stack)) }}
@@ -126,9 +126,9 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       # Linting a Dockerfile proves it is well-written, not that it works.
       # Building it is a separate question, and belongs here rather than in a
