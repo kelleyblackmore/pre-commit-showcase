@@ -41,11 +41,15 @@ class RingBuffer {
     return value;
   }
 
-  std::size_t size() const { return size_; }
+  // [[nodiscard]] on a const accessor turns `buffer.empty();` - a statement
+  // that computes an answer and throws it away, almost always a typo for
+  // something else - into a compiler warning. clang-tidy's
+  // modernize-use-nodiscard flags their absence.
+  [[nodiscard]] std::size_t size() const { return size_; }
 
-  std::size_t capacity() const { return buffer_.size(); }
+  [[nodiscard]] std::size_t capacity() const { return buffer_.size(); }
 
-  bool empty() const { return size_ == 0; }
+  [[nodiscard]] bool empty() const { return size_ == 0; }
 
  private:
   std::vector<T> buffer_;

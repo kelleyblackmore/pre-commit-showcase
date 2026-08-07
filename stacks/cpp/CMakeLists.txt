@@ -13,4 +13,11 @@ add_executable(ring_buffer_demo src/main.cpp)
 
 target_include_directories(ring_buffer_demo PRIVATE src)
 
-target_compile_options(ring_buffer_demo PRIVATE -Wall -Wextra -Wpedantic)
+# Warning flags are compiler-specific. `-Wextra` is not a thing MSVC understands - it reports
+# `invalid numeric argument '/Wextra'` and the build dies at the command line, before compiling
+# anything.
+if(MSVC)
+  target_compile_options(ring_buffer_demo PRIVATE /W4 /permissive-)
+else()
+  target_compile_options(ring_buffer_demo PRIVATE -Wall -Wextra -Wpedantic)
+endif()
