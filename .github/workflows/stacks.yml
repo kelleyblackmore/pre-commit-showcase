@@ -107,7 +107,7 @@ jobs:
           ansible-galaxy collection install -r stacks/ansible/requirements.yml
 
       - name: Cache pre-commit environments
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ matrix.stack }}-${{ runner.os }}-${{ hashFiles(format('stacks/{0}/.pre-commit-config.yaml', matrix.stack)) }}
