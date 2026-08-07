@@ -53,7 +53,7 @@ jobs:
         with:
           node-version: "22"
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         if: matrix.stack == 'csharp'
         with:
           dotnet-version: "8.0.x"
