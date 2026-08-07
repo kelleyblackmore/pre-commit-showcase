@@ -1,0 +1,22 @@
+{
+  "name": "slugkit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tiny slug helper used to exercise the JavaScript pre-commit hooks.",
+  "main": "src/index.js",
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.8.0",
+    "globals": "17.9.0",
+    "prettier": "3.9.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.66.0"
+  }
+}

@@ -1,0 +1,50 @@
+---
+# Every task below is written to satisfy the `production` ansible-lint profile.
+# The comments call out which rule each choice is answering.
+
+# fqcn[action-core]: always fully qualify module names. `package:` alone breaks
+# the moment a collection ships a module of the same name.
+- name: Install baseline packages
+  ansible.builtin.package:
+    name: "{{ baseline_packages }}"
+    state: present
+
+# risky-file-permissions: a `copy`/`template`/`file` task without an explicit
+# `mode` inherits the remote umask, which differs between hosts.
+- name: Write the MOTD banner
+  ansible.builtin.template:
+    src: motd.j2
+    dest: /etc/motd
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Log the MOTD change
+
+- name: Set the system timezone
+  community.general.timezone:
+    name: "{{ baseline_timezone }}"
+
+- name: Harden the SSH daemon
+  when: baseline_ssh_disable_password_auth | bool
+  block:
+    - name: Disable SSH password authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^\s*#?\s*PasswordAuthentication\s'
+        line: PasswordAuthentication no
+        validate: /usr/sbin/sshd -T -f %s
+        owner: root
+        group: root
+        mode: "0600"
+      notify: Restart sshd
+
+# no-changed-when: `command` and `shell` are always reported as changed unless
+# you say otherwise. A read-only command must declare `changed_when: false`.
+- name: Record the running kernel
+  ansible.builtin.command: uname -r
+  register: baseline_kernel
+  changed_when: false
+
+- name: Show the running kernel
+  ansible.builtin.debug:
+    msg: "Kernel in use: {{ baseline_kernel.stdout }}"

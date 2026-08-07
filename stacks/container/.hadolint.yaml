@@ -1,0 +1,30 @@
+---
+# hadolint configuration.
+#
+# The ignore list is empty on purpose: this Dockerfile is written to satisfy
+# every default rule, so the repo can demonstrate what "clean" looks like rather
+# than what "silenced" looks like.
+#
+# When you do need an exception, prefer an inline, single-line, commented one:
+#
+#     # hadolint ignore=DL3018
+#     RUN apk add --no-cache curl
+#
+# ...over adding the rule here, where it silently applies to every Dockerfile in
+# the repository forever.
+ignored: []
+
+failure-threshold: warning
+
+# hadolint embeds shellcheck for RUN instructions; ash is Alpine's shell.
+override:
+  error: []
+  warning: []
+  info: []
+  style: []
+
+trustedRegistries:
+  - docker.io
+  - ghcr.io
+  - registry.access.redhat.com
+  - gcr.io

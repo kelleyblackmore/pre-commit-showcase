@@ -1,0 +1,66 @@
+# =============================================================================
+# STANDALONE JavaScript / TypeScript config.
+#
+# The interesting question for JS repos is: pre-commit or husky + lint-staged?
+# See docs/js-husky-vs-pre-commit.md. Short version - if the repo is only
+# JavaScript, husky is the more native fit; if it is one language among several,
+# or your CI already standardises on pre-commit, use this.
+#
+# Key detail: pre-commit builds an isolated Node environment per hook and
+# installs `additional_dependencies` into it. Your project's node_modules is NOT
+# on the path, so every ESLint plugin and config you use must be listed there
+# and kept in step with package.json.
+# =============================================================================
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-json
+      - id: check-added-large-files
+      - id: detect-private-key
+      - id: pretty-format-json
+        args: [--autofix, --no-sort-keys, --indent, "2"]
+        exclude: ^(package-lock\.json|tsconfig.*\.json)$
+
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.9.6
+    hooks:
+      - id: prettier
+        # The upstream pre-commit/mirrors-prettier is archived and pinned to
+        # Prettier 3.1; rbubley's fork is the maintained continuation.
+        #
+        # Prettier needs no config imports, so unlike ESLint the vendored mirror
+        # works from a fresh clone with no `npm install`.
+        types_or: [javascript, jsx, ts, tsx, json, css, scss, markdown, yaml]
+        exclude: ^package-lock\.json$
+
+  # ESLint runs from the project's own node_modules, NOT from a pre-commit
+  # mirror. scripts/eslint.sh explains why in full; the short version is that
+  # `additional_dependencies` cannot satisfy a flat config that `import`s
+  # anything, because Node resolves those imports relative to the config file.
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint (project toolchain)
+        entry: scripts/eslint.sh
+        language: script
+        # Declared locally, so `types_or` is not fighting a manifest `types:
+        # [javascript]` that would silently drop every .ts file.
+        types_or: [javascript, ts, tsx]
+        files: \.([jt]sx?|mjs|cjs)$
+        require_serial: true
+
+  # Blocks committed lockfile conflicts and dependency drift.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-merge-conflict
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]

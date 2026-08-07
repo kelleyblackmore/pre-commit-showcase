@@ -1,0 +1,7 @@
+{# Jinja2 template. Note that .j2 files are excluded from check-yaml in the
+   config - they are not YAML, even when they render to it. #}
+================================================================
+ {{ inventory_hostname }}
+ Managed by Ansible. Local changes will be overwritten.
+ Owner: {{ motd_owner }}
+================================================================

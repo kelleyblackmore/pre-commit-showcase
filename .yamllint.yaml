@@ -1,0 +1,33 @@
+---
+# yamllint config used by the `yamllint` hook.
+#
+# Two rules almost every repo has to relax, and it is worth knowing why:
+#   * truthy      - GitHub Actions' `on:` key is parsed as the boolean `True`
+#                   by YAML 1.1, so `check-keys: false` stops the false alarm.
+#   * line-length - pre-commit configs and Ansible tasks legitimately run long.
+extends: default
+
+ignore: |
+  stacks/helm/charts/*/templates/
+  stacks/javascript/node_modules/
+  .terraform/
+  # YAML-shaped, but not YAML documents: clang-format's enum values (`Yes`,
+  # `No`, `MultiLine`) are not booleans and cannot be rewritten as true/false.
+  stacks/cpp/.clang-format
+
+rules:
+  line-length:
+    max: 200
+    level: warning
+  truthy:
+    check-keys: false
+  document-start:
+    present: true
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable
+  braces:
+    max-spaces-inside: 1
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: false

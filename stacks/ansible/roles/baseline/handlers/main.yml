@@ -1,0 +1,9 @@
+---
+- name: Restart sshd
+  ansible.builtin.service:
+    name: sshd
+    state: restarted
+
+- name: Log the MOTD change
+  ansible.builtin.debug:
+    msg: "MOTD updated for {{ motd_owner }}"

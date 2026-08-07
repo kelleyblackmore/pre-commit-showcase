@@ -1,0 +1,31 @@
+---
+# ansible-lint configuration.
+#
+# `production` is the strictest profile. Starting there and relaxing what you
+# genuinely cannot meet gives a far better result than starting at `min` and
+# never tightening it - the profile ladder is
+# min -> basic -> moderate -> safety -> shared -> production.
+profile: production
+
+exclude_paths:
+  - .cache/
+  - .github/
+  - collections/
+
+# Directories that are not Ansible content at all.
+kinds:
+  - playbook: "playbooks/*.yml"
+  - tasks: "roles/*/tasks/*.yml"
+  - handlers: "roles/*/handlers/*.yml"
+  - vars: "roles/*/{defaults,vars}/*.yml"
+  - meta: "roles/*/meta/main.yml"
+
+skip_list:
+  # This repo has no Galaxy namespace and is not published, so the role name
+  # convention check has nothing to enforce against.
+  - role-name
+
+# Treat warnings as errors so the hook cannot pass on a yellow run.
+strict: true
+
+use_default_rules: true

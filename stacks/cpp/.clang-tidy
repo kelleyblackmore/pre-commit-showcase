@@ -1,0 +1,17 @@
+---
+# Used by the manual-stage clang-tidy hook and by CI. Requires a compilation
+# database: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+Checks: >
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  bugprone-*,
+  performance-*,
+  modernize-*,
+  readability-*,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length,
+  -readability-magic-numbers
+
+WarningsAsErrors: "bugprone-*,clang-analyzer-*"
+HeaderFilterRegex: "src/.*"
+FormatStyle: file

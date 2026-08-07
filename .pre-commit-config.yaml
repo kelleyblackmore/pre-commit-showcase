@@ -1,0 +1,335 @@
+# =============================================================================
+# ROOT CONFIG — the "monorepo" pattern.
+#
+# One config at the repo root, with stack-specific hooks narrowed to their
+# subtree using `files:`. This is what you want when several languages live in
+# one repository: contributors run `pre-commit install` once and only the hooks
+# relevant to the files they touched actually execute.
+#
+# The *other* pattern — one self-contained config per repo — is shown in
+# stacks/<name>/.pre-commit-config.yaml. Those files are copy-paste ready for a
+# single-language repository. See docs/two-patterns.md.
+# =============================================================================
+---
+minimum_pre_commit_version: "3.5.0"
+
+# `pre-commit install` alone only wires up the pre-commit stage. Declaring the
+# hook types here means a plain `pre-commit install` also installs the
+# commit-msg and pre-push hooks used further down.
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+  - pre-push
+
+default_stages: [pre-commit]
+
+# Files nothing should ever lint. Helm templates are Go templates wearing a
+# .yaml extension and will break every YAML parser you point at them.
+exclude: |
+  (?x)^(
+    stacks/helm/charts/[^/]+/templates/.*|
+    stacks/javascript/dist/.*|
+    stacks/terraform/\.terraform/.*|
+    .*\.min\.(js|css)
+  )$
+
+repos:
+  # ---------------------------------------------------------------------------
+  # 1. Universal hygiene — every repo should run these, whatever it is written in
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        # Two trailing spaces are a hard line break in Markdown; keep them.
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-merge-conflict
+      - id: check-case-conflict # catches Foo.py vs foo.py before macOS/Windows do
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: detect-private-key
+      - id: check-json
+      - id: check-toml
+      - id: check-xml
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-symlinks
+      - id: destroyed-symlinks
+      # Refuse to commit straight to main. CI must SKIP this one — see
+      # .github/workflows/pre-commit.yml.
+      - id: no-commit-to-branch
+        args: [--branch, main]
+
+  # ---------------------------------------------------------------------------
+  # 2. Secrets — the single highest-value hook in this file
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+
+  # ---------------------------------------------------------------------------
+  # 3. Prose, YAML, Markdown, shell — cross-cutting formats
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.3
+    hooks:
+      - id: codespell
+        additional_dependencies: [tomli]
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        args: [-c, .yamllint.yaml]
+
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.23.2
+    hooks:
+      - id: markdownlint-cli2
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.13.1-1
+    hooks:
+      - id: shfmt
+        args: [-w, -i, "2", -ci]
+
+  # Lints .github/workflows/*.yml — shell in `run:` blocks, bad `needs:`,
+  # expressions that reference undefined contexts.
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+
+  # Validates files against their published JSON Schema.
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.37.4
+    hooks:
+      - id: check-github-workflows
+      - id: check-dependabot
+      - id: check-renovate
+
+  # ---------------------------------------------------------------------------
+  # 4. Commit messages (commit-msg stage, not pre-commit)
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+
+  # ---------------------------------------------------------------------------
+  # 5. PYTHON — stacks/python/
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.1
+    hooks:
+      # `ruff-check` is the current id. The old `ruff` id still exists as a
+      # deprecated alias, so autoupdate will not warn you about it.
+      - id: ruff-check # lint (replaces flake8, isort, pyupgrade, pydocstyle, ...)
+        args: [--fix]
+        files: ^(stacks/python|stacks/container/app|hooks)/
+      - id: ruff-format # format (drop-in for black)
+        files: ^(stacks/python|stacks/container/app|hooks)/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.3.0
+    hooks:
+      - id: mypy
+        files: ^stacks/python/src/
+        args: [--strict, --ignore-missing-imports]
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.4
+    hooks:
+      - id: bandit
+        files: ^stacks/python/src/
+        args: [-c, stacks/python/pyproject.toml]
+        additional_dependencies: ["bandit[toml]"]
+
+  # ---------------------------------------------------------------------------
+  # 6. JAVASCRIPT / TYPESCRIPT — stacks/javascript/
+  # ---------------------------------------------------------------------------
+  # Prettier has no config imports, so the vendored mirror works perfectly and
+  # nobody needs `npm install` to format.
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.9.6
+    hooks:
+      - id: prettier
+        files: ^stacks/javascript/.*\.(js|mjs|cjs|ts|tsx|jsx|json|css|md)$
+        exclude: ^stacks/javascript/package-lock\.json$
+
+  # ESLint is the opposite case. See stacks/javascript/scripts/eslint.sh for the
+  # full explanation: a flat config that `import`s anything cannot be satisfied
+  # by `additional_dependencies`, because Node resolves those imports relative
+  # to the config file, never from pre-commit's isolated environment.
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint (project toolchain)
+        entry: stacks/javascript/scripts/eslint.sh
+        language: script
+        # `types` from a manifest is ANDed with `files`; declaring the hook
+        # locally means we control both and .ts/.tsx are actually linted.
+        types_or: [javascript, ts, tsx]
+        files: ^stacks/javascript/.*\.(js|mjs|cjs|ts|tsx)$
+        require_serial: true
+
+  # ---------------------------------------------------------------------------
+  # 7. C / C++ — stacks/cpp/
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v22.1.8
+    hooks:
+      - id: clang-format
+        files: ^stacks/cpp/.*\.(c|cc|cpp|h|hpp)$
+
+  - repo: https://github.com/cpplint/cpplint
+    rev: 2.0.2
+    hooks:
+      - id: cpplint
+        files: ^stacks/cpp/.*\.(c|cc|cpp|h|hpp)$
+        args: [--quiet]
+
+  - repo: https://github.com/cheshirekow/cmake-format-precommit
+    rev: v0.6.13
+    hooks:
+      - id: cmake-format
+        files: ^stacks/cpp/
+        # cmakelang imports PyYAML lazily, only when the config file is YAML,
+        # and does not declare it as a dependency. Without this you get
+        # `ModuleNotFoundError: No module named 'yaml'` from inside the hook.
+        additional_dependencies: [pyyaml]
+
+  # ---------------------------------------------------------------------------
+  # 8. C# / .NET — stacks/csharp/
+  # ---------------------------------------------------------------------------
+  # No community mirror ships the .NET SDK, so this is a `system` hook that
+  # shells out to a locally installed `dotnet`. See stacks/csharp/README.md.
+  - repo: local
+    hooks:
+      - id: dotnet-format
+        name: dotnet format (whitespace + style + analyzers)
+        entry: stacks/csharp/scripts/dotnet-format.sh
+        language: script
+        files: ^stacks/csharp/.*\.(cs|csproj|sln)$
+        pass_filenames: false
+        require_serial: true
+
+  # ---------------------------------------------------------------------------
+  # 9. CONTAINERS — stacks/container/
+  # ---------------------------------------------------------------------------
+  # hadolint-py wraps the hadolint binary in a pip package, so no Docker daemon
+  # and no Go toolchain is needed to run it.
+  - repo: https://github.com/AleksaC/hadolint-py
+    rev: v2.15.1
+    hooks:
+      - id: hadolint
+        files: (^|/)(Dockerfile|Containerfile)(\..*)?$
+        args: [--config, stacks/container/.hadolint.yaml]
+
+  # ---------------------------------------------------------------------------
+  # 10. HELM — stacks/helm/
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/norwoodj/helm-docs
+    rev: v1.14.2
+    hooks:
+      - id: helm-docs
+        args: [--chart-search-root=stacks/helm/charts]
+        # helm-docs takes flags, not paths; it would treat matched files as
+        # stray positional args. It also needs the helm-docs binary on PATH -
+        # the hook is a `language: script` wrapper, not a vendored tool.
+        pass_filenames: false
+        require_serial: true
+
+  - repo: local
+    hooks:
+      - id: helm-lint
+        name: helm lint
+        entry: stacks/helm/scripts/helm-lint.sh
+        language: script
+        files: ^stacks/helm/charts/
+        pass_filenames: false
+
+  # ---------------------------------------------------------------------------
+  # 11. ANSIBLE — stacks/ansible/
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/ansible/ansible-lint
+    rev: v26.6.0
+    hooks:
+      - id: ansible-lint
+        # The upstream hook is `pass_filenames: false` + `always_run: true`, so
+        # a `files:` key here would do nothing. Scope it with an explicit
+        # project dir and path, or it wanders into the rest of the monorepo.
+        args: [--project-dir, stacks/ansible, stacks/ansible]
+        additional_dependencies:
+          - ansible-core>=2.17
+
+  # ---------------------------------------------------------------------------
+  # 12. TERRAFORM — stacks/terraform/
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.108.1
+    hooks:
+      - id: terraform_fmt
+        files: ^stacks/terraform/
+      - id: terraform_validate
+        files: ^stacks/terraform/
+        args: [--hook-config=--retry-once-with-cleanup=true]
+      - id: terraform_docs
+        files: ^stacks/terraform/
+        args: [--hook-config=--path-to-file=README.md, --hook-config=--add-to-existing-file=true]
+      - id: terraform_tflint
+        files: ^stacks/terraform/
+        args: [--args=--config=__GIT_WORKING_DIR__/stacks/terraform/.tflint.hcl]
+      - id: terraform_trivy
+        files: ^stacks/terraform/
+        # Quoted: inside a YAML flow sequence an unquoted comma is a separator,
+        # so yamllint's `commas` rule fires on `HIGH,CRITICAL`.
+        args: ["--args=--severity=HIGH,CRITICAL"]
+
+  # ---------------------------------------------------------------------------
+  # 13. Hooks written in THIS repo — see hooks/ and docs/writing-custom-hooks.md
+  # ---------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: check-stack-layout
+        name: every stack has a README + its own config
+        entry: python hooks/check_stack_layout.py
+        language: python
+        pass_filenames: false
+        always_run: true
+
+      - id: no-mutable-image-tags
+        name: no :latest / untagged container images
+        entry: python hooks/no_mutable_image_tags.py
+        language: python
+        files: (^|/)(Dockerfile|Containerfile)(\..*)?$|\.ya?ml$
+
+      # `language: fail` needs no implementation - the entry IS the message.
+      # State files contain every attribute of every resource, including the
+      # ones marked `sensitive`.
+      - id: no-terraform-state
+        name: never commit terraform state
+        entry: terraform state files must not be committed
+        language: fail
+        files: \.tfstate(\.backup)?$
+
+      # pre-push, not pre-commit: too slow to run on every commit.
+      - id: readme-toc
+        name: README table of contents is current
+        entry: python hooks/check_readme_toc.py
+        language: python
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

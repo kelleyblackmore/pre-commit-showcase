@@ -1,0 +1,150 @@
+---
+name: pre-commit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pre-commit-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # `no-commit-to-branch` is `always_run` and its entire job is to refuse main -
+  # which is exactly what CI checks out. Skipping it here is the standard fix.
+  SKIP: no-commit-to-branch
+  TFLINT_VERSION: v0.64.0
+  TERRAFORM_DOCS_VERSION: v0.24.0
+  TRIVY_VERSION: v0.73.0
+  HELM_DOCS_VERSION: v1.14.2
+
+jobs:
+  root-config:
+    name: root config, all files
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks and any history-aware hook need more than a depth-1 clone.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - uses: azure/setup-helm@v4
+        with:
+          # Pinned to 3.x: the chart is apiVersion v2 and `helm lint --strict`
+          # behaviour is what this repo documents.
+          version: v3.21.3
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.15.8"
+          # The wrapper replaces `terraform` with a script that mangles stdout.
+          # terraform_fmt and terraform_docs both break on it.
+          terraform_wrapper: false
+
+      - name: Install non-vendored CLI tools
+        run: |
+          set -euxo pipefail
+          bin="${HOME}/.local/bin"
+          mkdir -p "${bin}"
+
+          curl -fsSL "https://github.com/terraform-linters/tflint/releases/download/${TFLINT_VERSION}/tflint_linux_amd64.zip" -o /tmp/tflint.zip
+          unzip -o -q /tmp/tflint.zip -d "${bin}"
+
+          curl -fsSL "https://github.com/terraform-docs/terraform-docs/releases/download/${TERRAFORM_DOCS_VERSION}/terraform-docs-${TERRAFORM_DOCS_VERSION}-linux-amd64.tar.gz" -o /tmp/tfdocs.tgz
+          tar -xzf /tmp/tfdocs.tgz -C "${bin}" terraform-docs
+
+          curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${TRIVY_VERSION#v}_Linux-64bit.tar.gz" -o /tmp/trivy.tgz
+          tar -xzf /tmp/trivy.tgz -C "${bin}" trivy
+
+          # The helm-docs pre-commit hook is a `language: script` wrapper that
+          # execs `helm-docs` and exits 1 if it is not on PATH - it does not
+          # vendor the binary.
+          curl -fsSL "https://github.com/norwoodj/helm-docs/releases/download/${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION#v}_Linux_x86_64.tar.gz" -o /tmp/helm-docs.tgz
+          tar -xzf /tmp/helm-docs.tgz -C "${bin}" helm-docs
+
+          chmod +x "${bin}"/*
+          echo "${bin}" >> "${GITHUB_PATH}"
+
+      - name: Report tool versions
+        run: |
+          set -eo pipefail
+          terraform version
+          tflint --version
+          terraform-docs --version
+          trivy --version
+          helm-docs --version
+          helm version --short
+          dotnet --version
+
+      - name: Initialise the terraform working directory
+        # terraform_validate needs resolved providers. On a fresh clone there is
+        # no .terraform/, and the hook's error does not say so clearly.
+        working-directory: stacks/terraform
+        run: terraform init -backend=false -input=false
+
+      - name: Install the JavaScript toolchain
+        # The eslint hook uses the project's own ESLint (see
+        # stacks/javascript/scripts/eslint.sh), so node_modules must exist.
+        run: ./stacks/javascript/scripts/precommit-bootstrap.sh
+
+      - name: Install Ansible collections
+        run: |
+          set -eo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install "ansible-core>=2.17"
+          ansible-galaxy collection install -r stacks/ansible/requirements.yml
+
+      - name: Cache pre-commit environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          # The config files must be in the key, or a rev: bump serves a stale
+          # environment from cache.
+          key: pre-commit-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-
+
+      - name: Install pre-commit
+        run: python -m pip install pre-commit
+
+      - name: Test the repo-local hooks
+        # A hook that can block every commit deserves tests, and they should fail
+        # as tests rather than as a mysterious commit rejection.
+        run: |
+          set -eo pipefail
+          python -m pip install pytest
+          python -m pytest hooks/tests -q
+
+      - name: Run pre-commit
+        run: pre-commit run --all-files --show-diff-on-failure --color=always
+
+      - name: Run the manual-stage hooks
+        # Slow / networked hooks that are deliberately off the commit path.
+        # Advisory: a new CVE in a transitive dependency should not turn the
+        # formatting gate red.
+        continue-on-error: true
+        run: pre-commit run --hook-stage manual --all-files --color=always

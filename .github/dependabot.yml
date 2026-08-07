@@ -1,0 +1,44 @@
+---
+# Validated by the `check-dependabot` hook (check-jsonschema).
+#
+# Dependabot understands the `pre-commit` ecosystem and opens one PR per
+# outdated hook repository. That is an alternative to the scheduled
+# `autoupdate.yml` workflow - running both means duplicate PRs, so pick one.
+# This repo keeps Dependabot on the things autoupdate does not cover.
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies]
+
+  - package-ecosystem: npm
+    directory: /stacks/javascript
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies]
+
+  - package-ecosystem: docker
+    directory: /stacks/container
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies]
+
+  - package-ecosystem: terraform
+    directory: /stacks/terraform
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies]
+
+  - package-ecosystem: nuget
+    directory: /stacks/csharp/src/Showcase
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies]

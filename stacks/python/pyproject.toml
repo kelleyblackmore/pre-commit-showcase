@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tempconv"
+version = "0.1.0"
+description = "Tiny temperature converter used to exercise the Python pre-commit hooks."
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "mypy>=1.13", "ruff>=0.8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# =============================================================================
+# Ruff - linter and formatter. Configured here so that the editor, the hook and
+# CI all read exactly the same settings.
+# =============================================================================
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "F",    # pyflakes
+  "I",    # isort
+  "N",    # pep8-naming
+  "UP",   # pyupgrade
+  "B",    # flake8-bugbear
+  "A",    # flake8-builtins
+  "C4",   # flake8-comprehensions
+  "SIM",  # flake8-simplify
+  "PTH",  # flake8-use-pathlib
+  "RUF",  # ruff-specific
+  "D",    # pydocstyle
+]
+ignore = [
+  "D203", # conflicts with D211 (both cannot be satisfied)
+  "D213", # conflicts with D212
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D100", "D103"] # docstrings are not required in tests
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+# =============================================================================
+# mypy
+# =============================================================================
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_unreachable = true
+
+# =============================================================================
+# Bandit - security linter. `assert` is fine in tests, so tests are excluded.
+# =============================================================================
+[tool.bandit]
+exclude_dirs = ["tests"]

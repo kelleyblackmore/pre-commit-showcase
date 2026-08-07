@@ -1,0 +1,73 @@
+# =============================================================================
+# STANDALONE Helm config.
+#
+# The one thing that trips up every Helm repo: files under templates/ are Go
+# templates that happen to end in .yaml. They are NOT valid YAML.
+#
+#     {{- if .Values.ingress.enabled }}
+#
+# will fail check-yaml, yamllint, and every schema validator you point at it.
+# So every generic YAML hook in this file excludes templates/, and correctness
+# of the templates is checked by rendering them (`helm lint`, `helm template`)
+# instead of by parsing them.
+# =============================================================================
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        exclude: ^charts/[^/]+/templates/ # Go templates, not YAML
+      - id: check-json # values.schema.json
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        args: [-c, .yamllint.yaml]
+        exclude: ^charts/[^/]+/templates/
+
+  # Regenerates each chart's README.md from Chart.yaml + values.yaml comments.
+  # Values tables go stale within a week of being written by hand; this is the
+  # fix.
+  - repo: https://github.com/norwoodj/helm-docs
+    rev: v1.14.2
+    hooks:
+      - id: helm-docs
+        args: [--chart-search-root=charts]
+        # helm-docs takes flags, not file paths, and regenerates every chart it
+        # finds anyway. Leaving pass_filenames on appends matched paths as
+        # stray positional arguments.
+        pass_filenames: false
+        # `language: script` wrapping a binary you install yourself - the hook
+        # does NOT vendor helm-docs.
+        require_serial: true
+
+  - repo: local
+    hooks:
+      # `helm lint --strict` renders the templates and validates values.yaml
+      # against values.schema.json. This is the hook that actually catches
+      # broken templates.
+      - id: helm-lint
+        name: helm lint --strict
+        entry: scripts/helm-lint.sh
+        language: script
+        files: ^charts/
+        pass_filenames: false
+
+      # Renders the chart and validates the output against the Kubernetes API
+      # schemas. Catches `apiVersion: apps/v1beta1`-style rot that helm lint
+      # does not. Needs to download schemas, so: pre-push, not pre-commit.
+      - id: kubeconform
+        name: kubeconform (render + validate against k8s schemas)
+        entry: scripts/kubeconform.sh
+        language: script
+        files: ^charts/
+        pass_filenames: false
+        stages: [pre-push]

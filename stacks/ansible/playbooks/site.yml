@@ -1,0 +1,22 @@
+---
+- name: Apply baseline configuration to web servers
+  hosts: webservers
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: baseline
+
+  post_tasks:
+    - name: Verify the MOTD was written
+      ansible.builtin.stat:
+        path: /etc/motd
+      register: motd_stat
+      changed_when: false
+
+    - name: Fail when the MOTD is missing
+      ansible.builtin.assert:
+        that:
+          - motd_stat.stat.exists
+        fail_msg: /etc/motd was not created
+        success_msg: /etc/motd is present

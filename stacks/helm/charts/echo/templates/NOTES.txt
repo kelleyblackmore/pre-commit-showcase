@@ -1,0 +1,8 @@
+{{ .Chart.Name }} {{ .Chart.Version }} installed as release "{{ .Release.Name }}".
+
+Reach the service:
+
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "echo.fullname" . }} 8080:{{ .Values.service.port }}
+  curl http://127.0.0.1:8080/healthz
+
+Image in use: {{ include "echo.image" . }}

@@ -1,0 +1,159 @@
+---
+name: stacks
+
+# Proves each stacks/<name>/.pre-commit-config.yaml still works as a STANDALONE
+# config - copied into its own fresh git repo, with no monorepo around it.
+#
+# Without this job, the copy-pasteable configs would rot the first time someone
+# edited only the root config, and nobody would notice until a reader tried to
+# use one.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stacks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  standalone:
+    name: ${{ matrix.stack }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    strategy:
+      fail-fast: false
+      matrix:
+        stack:
+          - python
+          - javascript
+          - cpp
+          - csharp
+          - container
+          - helm
+          - ansible
+          - terraform
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        if: matrix.stack == 'javascript'
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-dotnet@v4
+        if: matrix.stack == 'csharp'
+        with:
+          dotnet-version: "8.0.x"
+
+      - uses: azure/setup-helm@v4
+        if: matrix.stack == 'helm'
+        with:
+          version: v3.21.3
+
+      - name: Install helm-docs
+        if: matrix.stack == 'helm'
+        run: |
+          set -euxo pipefail
+          bin="${HOME}/.local/bin"
+          mkdir -p "${bin}"
+          curl -fsSL "https://github.com/norwoodj/helm-docs/releases/download/v1.14.2/helm-docs_1.14.2_Linux_x86_64.tar.gz" -o /tmp/helm-docs.tgz
+          tar -xzf /tmp/helm-docs.tgz -C "${bin}" helm-docs
+          chmod +x "${bin}/helm-docs"
+          echo "${bin}" >> "${GITHUB_PATH}"
+
+      - uses: hashicorp/setup-terraform@v3
+        if: matrix.stack == 'terraform'
+        with:
+          terraform_version: "1.15.8"
+          terraform_wrapper: false
+
+      - name: Install terraform tooling
+        if: matrix.stack == 'terraform'
+        run: |
+          set -euxo pipefail
+          bin="${HOME}/.local/bin"
+          mkdir -p "${bin}"
+
+          curl -fsSL "https://github.com/terraform-linters/tflint/releases/download/v0.64.0/tflint_linux_amd64.zip" -o /tmp/tflint.zip
+          unzip -o -q /tmp/tflint.zip -d "${bin}"
+
+          curl -fsSL "https://github.com/terraform-docs/terraform-docs/releases/download/v0.24.0/terraform-docs-v0.24.0-linux-amd64.tar.gz" -o /tmp/tfdocs.tgz
+          tar -xzf /tmp/tfdocs.tgz -C "${bin}" terraform-docs
+
+          curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v0.73.0/trivy_0.73.0_Linux-64bit.tar.gz" -o /tmp/trivy.tgz
+          tar -xzf /tmp/trivy.tgz -C "${bin}" trivy
+
+          chmod +x "${bin}"/*
+          echo "${bin}" >> "${GITHUB_PATH}"
+
+      - name: Install Ansible collections
+        if: matrix.stack == 'ansible'
+        run: |
+          set -eo pipefail
+          python -m pip install "ansible-core>=2.17"
+          ansible-galaxy collection install -r stacks/ansible/requirements.yml
+
+      - name: Cache pre-commit environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ matrix.stack }}-${{ runner.os }}-${{ hashFiles(format('stacks/{0}/.pre-commit-config.yaml', matrix.stack)) }}
+          restore-keys: |
+            pre-commit-${{ matrix.stack }}-${{ runner.os }}-
+
+      - name: Install pre-commit
+        run: python -m pip install pre-commit
+
+      - name: Run the standalone config in an isolated repo
+        run: ./scripts/run-stack.sh "${{ matrix.stack }}"
+
+  build-container:
+    name: container image builds
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Linting a Dockerfile proves it is well-written, not that it works.
+      # Building it is a separate question, and belongs here rather than in a
+      # commit hook.
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: stacks/container
+          push: false
+          load: true
+          tags: precommit-showcase/echo:ci
+
+      - name: Smoke-test the image
+        run: |
+          set -eo pipefail
+          docker run -d --rm --name echo-ci -p 8080:8080 precommit-showcase/echo:ci
+          for _ in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8080/healthz; then
+              echo
+              docker stop echo-ci
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "service did not become healthy" >&2
+          docker logs echo-ci >&2
+          docker stop echo-ci
+          exit 1

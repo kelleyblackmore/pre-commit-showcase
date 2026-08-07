@@ -1,0 +1,11 @@
+# Lockfiles are generated and enormous; reformatting them creates noise and
+# merge conflicts for zero benefit.
+package-lock.json
+
+# Prettier formats YAML, and so does yamllint's opinion of it in the monorepo
+# root. Two formatters owning one file is the conflict this repo's docs warn
+# about - so pre-commit's own config is off-limits to Prettier.
+.pre-commit-config.yaml
+node_modules/
+dist/
+coverage/

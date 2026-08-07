@@ -1,0 +1,7 @@
+---
+# Collections the playbooks depend on. ansible-lint needs these installed to
+# resolve `community.general.timezone`, which is why CI runs
+# `ansible-galaxy collection install -r requirements.yml` before the hooks.
+collections:
+  - name: community.general
+    version: ">=9.0.0"

@@ -1,0 +1,72 @@
+# =============================================================================
+# STANDALONE Terraform / OpenTofu config.
+#
+# antonbabenko/pre-commit-terraform is the de-facto standard collection. Every
+# hook in it is a thin wrapper around a binary you must install yourself -
+# terraform, tflint, terraform-docs, trivy, infracost. The hooks do not vendor
+# them. See stacks/terraform/README.md for the install line.
+#
+# Ordering matters and is not alphabetical:
+#   fmt      -> rewrites files, so it goes first
+#   validate -> needs `terraform init`, so it goes after fmt
+#   docs     -> regenerates README from the post-fmt source
+#   tflint   -> opinionated lint, after the tree is known-good
+#   trivy    -> security scan, last and slowest
+# =============================================================================
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-added-large-files
+
+  # A committed .tfstate leaks every attribute of every resource, including
+  # values marked `sensitive` in the config. `language: fail` needs no
+  # implementation at all - the `entry:` is the error message, and any file
+  # matching `files:` fails the commit.
+  - repo: local
+    hooks:
+      - id: no-terraform-state
+        name: never commit terraform state
+        entry: terraform state files must not be committed
+        language: fail
+        files: \.tfstate(\.backup)?$
+
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.108.1
+    hooks:
+      - id: terraform_fmt
+
+      - id: terraform_validate
+        # Re-runs with a clean .terraform/ if the first attempt fails because of
+        # a stale provider cache - the single most common false failure here.
+        args: [--hook-config=--retry-once-with-cleanup=true]
+
+      - id: terraform_docs
+        args:
+          - --hook-config=--path-to-file=README.md
+          - --hook-config=--add-to-existing-file=true
+          - --hook-config=--create-file-if-not-exist=true
+
+      - id: terraform_tflint
+        args: [--args=--config=__GIT_WORKING_DIR__/.tflint.hcl]
+
+      - id: terraform_trivy
+        # Quoted: inside a YAML flow sequence an unquoted comma is a separator,
+        # so yamllint's `commas` rule fires on `HIGH,CRITICAL`.
+        args: ["--args=--severity=HIGH,CRITICAL"]
+
+      # Blocks `terraform apply` from ever seeing a lockfile that only records
+      # hashes for your laptop's platform.
+      - id: terraform_providers_lock
+        stages: [manual]
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]

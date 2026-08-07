@@ -1,0 +1,14 @@
+---
+# Owner shown in the MOTD banner.
+motd_owner: unassigned
+
+# Packages installed on every host.
+baseline_packages:
+  - ca-certificates
+  - curl
+
+# Timezone applied to every host.
+baseline_timezone: UTC
+
+# When true, the SSH daemon is reconfigured to refuse password authentication.
+baseline_ssh_disable_password_auth: true

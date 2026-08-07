@@ -1,0 +1,25 @@
+---
+# Validated by the `check-jsonschema` hook against the published compose-spec
+# schema, and by the repo-local `no-mutable-image-tags` hook.
+services:
+  echo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: precommit-showcase/echo:0.1.0
+    ports:
+      - "8080:8080"
+    read_only: true
+    user: "10001:10001"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=2)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped

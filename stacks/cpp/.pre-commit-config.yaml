@@ -1,0 +1,64 @@
+# =============================================================================
+# STANDALONE C / C++ config.
+#
+# The split to understand here:
+#   * clang-format  - pure formatting, no compilation, fast. Safe on every commit.
+#   * cpplint       - style/lint, no compilation, fast. Safe on every commit.
+#   * clang-tidy    - real static analysis, needs a compilation database
+#                     (compile_commands.json) and is slow. Kept at the `manual`
+#                     stage and run in CI. See the note on that hook below.
+# =============================================================================
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v22.1.8
+    hooks:
+      - id: clang-format
+        types_or: [c, c++, cuda, objective-c]
+
+  - repo: https://github.com/cpplint/cpplint
+    rev: 2.0.2
+    hooks:
+      - id: cpplint
+        args: [--quiet]
+
+  - repo: https://github.com/cheshirekow/cmake-format-precommit
+    rev: v0.6.13
+    hooks:
+      # cmakelang imports PyYAML lazily when the config file is .yaml, but does
+      # not declare it as a dependency - hence the explicit addition. Symptom
+      # without it: `ModuleNotFoundError: No module named 'yaml'`.
+      - id: cmake-format
+        additional_dependencies: [pyyaml]
+      - id: cmake-lint
+        additional_dependencies: [pyyaml]
+
+  # ---------------------------------------------------------------------------
+  # clang-tidy needs `compile_commands.json`, which only exists after you have
+  # configured the build:
+  #
+  #     cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+  #
+  # Putting that on the pre-commit path means every fresh clone fails its first
+  # commit. Keep it manual/CI:
+  #
+  #     pre-commit run --hook-stage manual clang-tidy --all-files
+  # ---------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: clang-tidy
+        name: clang-tidy (needs a configured build dir)
+        entry: scripts/clang-tidy.sh
+        language: script
+        types_or: [c, c++]
+        stages: [manual]

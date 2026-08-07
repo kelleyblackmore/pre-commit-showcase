@@ -1,0 +1,66 @@
+---
+# Comments starting with `# --` are picked up by helm-docs and become the
+# description column of the values table in README.md. That is the whole reason
+# to write them in this style.
+
+# -- Number of replicas to run.
+replicaCount: 2
+
+image:
+  # -- Image repository.
+  repository: ghcr.io/kelleyblackmore/precommit-showcase-echo
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+  # -- Image tag. Defaults to the chart's appVersion when empty.
+  tag: ""
+
+# -- Image pull secrets for private registries.
+imagePullSecrets: []
+
+# -- Override the generated resource name prefix.
+nameOverride: ""
+# -- Override the generated fully qualified resource name.
+fullnameOverride: ""
+
+service:
+  # -- Kubernetes Service type.
+  type: ClusterIP
+  # -- Service port.
+  port: 80
+
+resources:
+  limits:
+    # -- CPU limit.
+    cpu: 200m
+    # -- Memory limit.
+    memory: 128Mi
+  requests:
+    # -- CPU request.
+    cpu: 50m
+    # -- Memory request.
+    memory: 64Mi
+
+podSecurityContext:
+  # -- Filesystem group applied to mounted volumes.
+  fsGroup: 10001
+  # -- Require the container to run as a non-root user.
+  runAsNonRoot: true
+  # -- UID the container runs as.
+  runAsUser: 10001
+
+securityContext:
+  # -- Disallow privilege escalation.
+  allowPrivilegeEscalation: false
+  # -- Mount the container root filesystem read-only.
+  readOnlyRootFilesystem: true
+  capabilities:
+    # -- Linux capabilities to drop.
+    drop:
+      - ALL
+
+# -- Node selector for pod assignment.
+nodeSelector: {}
+# -- Tolerations for pod assignment.
+tolerations: []
+# -- Affinity rules for pod assignment.
+affinity: {}

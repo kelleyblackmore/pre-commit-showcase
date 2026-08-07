@@ -1,0 +1,20 @@
+---
+config:
+  # Long prose lines are fine; we wrap at semantic boundaries, not columns.
+  MD013: false
+  # Duplicate headings are expected - every stack README uses the same section
+  # names ("What runs", "Local setup", "Gotchas").
+  MD024:
+    siblings_only: true
+  # Inline HTML is used for the badge table and <details> blocks.
+  MD033: false
+  # The first line of a stack README is a heading, but the root README opens
+  # with badges.
+  MD041: false
+
+globs:
+  - "**/*.md"
+
+ignores:
+  - "stacks/javascript/node_modules/**"
+  - "stacks/terraform/.terraform/**"

@@ -1,0 +1,56 @@
+---
+name: autoupdate
+
+# `rev:` pins go stale silently. pre-commit.ci does this for you, but it cannot
+# run the `system` hooks this repo uses for Terraform, Helm and .NET - so the
+# update runs here instead, and the normal CI workflows verify the result.
+
+on:
+  schedule:
+    # Mondays, 06:00 UTC.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  autoupdate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pre-commit
+        run: python -m pip install pre-commit
+
+      - name: Update every config in the repo
+        run: |
+          set -eo pipefail
+          pre-commit autoupdate
+          for config in stacks/*/.pre-commit-config.yaml; do
+            echo "==> ${config}"
+            pre-commit autoupdate --config "${config}"
+          done
+
+      - name: Open a pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/pre-commit-autoupdate
+          delete-branch: true
+          commit-message: "chore: pre-commit autoupdate"
+          title: "chore: pre-commit autoupdate"
+          body: |
+            Automated `pre-commit autoupdate` across the root config and all
+            eight standalone stack configs.
+
+            The `pre-commit` and `stacks` workflows verify the new revisions.
+            Check those before merging - a hook can rename or remove an id
+            between tags, and `autoupdate` will happily pin you to it.
+          labels: dependencies

@@ -1,0 +1,5 @@
+[codespell]
+skip = ./.git,./stacks/javascript/node_modules,./stacks/terraform/.terraform,./stacks/javascript/package-lock.json,*.svg
+# `crate` (Rust), `ba` (Ansible host var), `iam` (AWS IAM) are all real words here.
+ignore-words-list = crate,ba,iam,nd,te,alle
+check-hidden = true

@@ -1,0 +1,41 @@
+# Tool configuration for the Python that is NOT part of the Python stack:
+# the repo-local hooks in hooks/, and the container stack's example app.
+#
+# Ruff resolves its settings from the nearest pyproject.toml above each file, so
+# stacks/python/ keeps its own stricter config and is unaffected by this one.
+# That per-directory resolution is exactly why the repo puts tool config in
+# pyproject.toml rather than in hook `args:`.
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle errors (includes E402, import-not-at-top)
+  "W",    # pycodestyle warnings
+  "F",    # pyflakes
+  "I",    # isort
+  "N",    # pep8-naming
+  "UP",   # pyupgrade
+  "B",    # flake8-bugbear
+  "A",    # flake8-builtins
+  "C4",   # flake8-comprehensions
+  "SIM",  # flake8-simplify
+  "S",    # flake8-bandit
+  "T20",  # flake8-print
+  "RUF",  # ruff-specific, incl. RUF100 unused-noqa
+]
+ignore = [
+  # Hooks are command-line programs: printing IS the interface.
+  "T201",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Hooks print findings to stdout/stderr by design, and `subprocess` use in a
+# wrapper is the point rather than a smell.
+"hooks/*.py" = ["T201"]
+"hooks/tests/*.py" = ["S101"] # assert is what pytest is made of
+
+[tool.ruff.format]
+docstring-code-format = true

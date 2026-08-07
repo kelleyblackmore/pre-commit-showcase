@@ -1,0 +1,71 @@
+# =============================================================================
+# STANDALONE container config (Docker / Podman / OCI).
+#
+# Note which hooks need a container runtime and which do not:
+#
+#   hadolint-py  - pip package wrapping the hadolint binary. No daemon, no Go
+#                  toolchain, works on a laptop and in a locked-down CI runner.
+#                  Prefer it over the `hadolint-docker` hook, which shells out
+#                  to `docker run` and fails in any environment without a socket.
+#   trivy/checkov- filesystem scanners. Fast enough for pre-commit on a small
+#                  repo, but they hit the network for vulnerability data, so
+#                  they are parked at the `manual` stage here.
+#
+# The actual image build belongs in CI, not in a commit hook.
+# =============================================================================
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-added-large-files
+      - id: detect-private-key
+
+  - repo: https://github.com/AleksaC/hadolint-py
+    rev: v2.15.1
+    hooks:
+      - id: hadolint
+        # Matches Dockerfile, Containerfile, Dockerfile.dev, api.Dockerfile, ...
+        files: (^|/)(Dockerfile|Containerfile)(\..*)?$|\.(dockerfile|containerfile)$
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck # entrypoint scripts are where container bugs hide
+
+  # Compose files are YAML with a schema; validate against it rather than only
+  # checking that the YAML parses.
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.37.4
+    hooks:
+      - id: check-jsonschema
+        name: validate docker-compose files
+        files: ^(docker-)?compose(\.[a-z0-9-]+)?\.ya?ml$
+        args:
+          - --schemafile
+          - https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+  # A `pygrep` hook needs no script file, so this config stays self-contained
+  # when copied into another repo. The monorepo root uses a fuller Python
+  # implementation (hooks/no_mutable_image_tags.py) that also catches *untagged*
+  # images without flagging multi-stage `FROM builder` references - see
+  # docs/writing-custom-hooks.md.
+  - repo: local
+    hooks:
+      - id: no-latest-image-tag
+        name: no :latest container image tags
+        entry: (?i)(^\s*FROM\s+\S+:latest|^\s*-?\s*image:\s*["']?\S+:latest)
+        language: pygrep
+        files: (^|/)(Dockerfile|Containerfile)(\..*)?$|\.ya?ml$
+
+  # --- Security scanning: real value, wrong cadence for every commit ----------
+  - repo: https://github.com/bridgecrewio/checkov
+    rev: 3.3.9
+    hooks:
+      - id: checkov
+        stages: [manual]
+        args: [--framework, dockerfile, --quiet, --compact]

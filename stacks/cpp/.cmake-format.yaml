@@ -1,0 +1,12 @@
+---
+format:
+  line_width: 100
+  tab_size: 2
+  dangle_parens: false
+  command_case: lower
+  keyword_case: upper
+
+lint:
+  # C0301 duplicated by format.line_width, and cmake-lint counts the line before
+  # cmake-format has reflowed it, so the two disagree on freshly written files.
+  disabled_codes: [C0301]

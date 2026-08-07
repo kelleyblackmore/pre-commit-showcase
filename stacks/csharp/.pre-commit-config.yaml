@@ -1,0 +1,54 @@
+# =============================================================================
+# STANDALONE C# / .NET config.
+#
+# There is no community pre-commit mirror that ships the .NET SDK, and there
+# cannot really be one - the SDK is a ~200 MB install with its own versioning
+# via global.json. So C# hooks are `language: system` or `language: script`:
+# they shell out to the `dotnet` already on the machine.
+#
+# The upside is that `dotnet format` reads the same .editorconfig your IDE does,
+# so the hook, Visual Studio, Rider and CI cannot disagree.
+# =============================================================================
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-xml # .csproj / .props / .targets are XML
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: local
+    hooks:
+      # `dotnet format` has three sub-commands; running all three is what the
+      # bare `dotnet format` used to do:
+      #   whitespace - .editorconfig layout rules
+      #   style      - IDExxxx code-style rules
+      #   analyzers  - CAxxxx analyzer rules (slowest)
+      - id: dotnet-format
+        name: dotnet format (whitespace + style + analyzers)
+        entry: scripts/dotnet-format.sh
+        language: script
+        files: \.(cs|csproj|props|targets|sln)$
+        pass_filenames: false
+        require_serial: true
+
+      # Verifies the tree still builds with warnings as errors. Slow - keep it
+      # off the commit path and let it run before the branch leaves the machine.
+      - id: dotnet-build
+        name: dotnet build (warnings as errors)
+        entry: scripts/dotnet-build.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]

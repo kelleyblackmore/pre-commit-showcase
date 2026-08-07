@@ -1,0 +1,8 @@
+# Keep the build context small - it is uploaded to the daemon on every build.
+.git
+.gitignore
+README.md
+compose.yaml
+__pycache__/
+*.pyc
+.pytest_cache/

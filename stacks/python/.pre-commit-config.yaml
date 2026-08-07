@@ -1,0 +1,75 @@
+# =============================================================================
+# STANDALONE Python config.
+#
+# Copy this file to the root of a Python repository and it works as-is - no
+# `files:` scoping, because in a single-language repo there is nothing to scope
+# against. The root config of this repo has the same hooks, narrowed to
+# stacks/python/.
+# =============================================================================
+---
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: debug-statements # bare breakpoint() / pdb.set_trace()
+      - id: detect-private-key
+      - id: name-tests-test # tests must be named test_*.py
+        args: [--pytest-test-first]
+
+  # ---------------------------------------------------------------------------
+  # Ruff replaces flake8 + isort + pyupgrade + pydocstyle + autoflake + more,
+  # in one Rust binary. Order matters: lint-with-fix first, format second, so
+  # the formatter gets the last word on layout.
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.1
+    hooks:
+      # `ruff-check` is the current id; plain `ruff` survives as a deprecated
+      # alias, so `autoupdate` will happily leave you on it forever.
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  # ---------------------------------------------------------------------------
+  # mypy in pre-commit runs in its own isolated virtualenv and therefore cannot
+  # see your project's dependencies. Anything whose types matter has to be
+  # listed in `additional_dependencies`. This is the single most common source
+  # of "works locally, fails in the hook" confusion.
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.3.0
+    hooks:
+      - id: mypy
+        files: ^src/
+        args: [--strict, --ignore-missing-imports]
+        additional_dependencies: []
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.4
+    hooks:
+      - id: bandit
+        files: ^src/
+        args: [-c, pyproject.toml]
+        additional_dependencies: ["bandit[toml]"]
+
+  # Dependency CVE audit is slow; keep it off the commit path and let CI or a
+  # deliberate `pre-commit run --hook-stage manual pip-audit` invoke it.
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.10.1
+    hooks:
+      - id: pip-audit
+        stages: [manual]
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]

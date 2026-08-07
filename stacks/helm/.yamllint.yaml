@@ -1,0 +1,24 @@
+---
+# Without this file, yamllint falls back to its defaults - including an 80
+# character line limit that a normal `description:` in Chart.yaml exceeds
+# immediately. A standalone config that inherits surprise defaults is not
+# actually copy-pasteable, so the stack ships its own.
+extends: default
+
+ignore: |
+  charts/*/templates/
+
+rules:
+  line-length:
+    max: 140
+    level: warning
+  # `true`/`false` are the only booleans in a chart, but Kubernetes manifests
+  # use bare `on`/`off`/`yes` as plain strings in plenty of places.
+  truthy:
+    check-keys: false
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable
+  # Chart.yaml and values.yaml carry `---`; the templates are excluded above.
+  document-start:
+    present: true
