@@ -44,6 +44,13 @@ nobody ever tightens.
 **`strict: true` is what makes it a gate.** Without it ansible-lint exits 0 on
 warnings.
 
+**Role variables must be prefixed with the role name.** The production profile
+enforces `var-naming[no-role-prefix]`, so a role called `baseline` must declare
+`baseline_motd_owner`, not `motd_owner`. This looks like bureaucracy and is not:
+Ansible variables live in one global namespace at runtime, so two roles that both
+define `motd_owner` silently overwrite each other, and the winner depends on
+include order.
+
 **Vaulted files need special handling everywhere.** They are ciphertext, so
 `check-yaml` must exclude them. And the recurring accident —
 `ansible-vault decrypt`, edit, commit, forget to re-encrypt — is not something

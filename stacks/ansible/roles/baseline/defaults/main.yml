@@ -1,6 +1,11 @@
 ---
 # Owner shown in the MOTD banner.
-motd_owner: unassigned
+#
+# The `baseline_` prefix is not decoration: ansible-lint's production profile
+# enforces var-naming[no-role-prefix], because role variables share one global
+# namespace at runtime. Two roles both defining `motd_owner` silently clobber
+# each other.
+baseline_motd_owner: unassigned
 
 # Packages installed on every host.
 baseline_packages:

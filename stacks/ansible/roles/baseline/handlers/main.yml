@@ -6,4 +6,4 @@
 
 - name: Log the MOTD change
   ansible.builtin.debug:
-    msg: "MOTD updated for {{ motd_owner }}"
+    msg: "MOTD updated for {{ baseline_motd_owner }}"
