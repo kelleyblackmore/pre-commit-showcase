@@ -58,7 +58,7 @@ jobs:
           # behaviour is what this repo documents.
           version: v3.21.3
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "1.15.8"
           # The wrapper replaces `terraform` with a script that mangles stdout.
