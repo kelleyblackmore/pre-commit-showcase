@@ -113,7 +113,7 @@ repos:
 
   # Validates files against their published JSON Schema.
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.37.4
+    rev: 0.38.0
     hooks:
       - id: check-github-workflows
       - id: check-dependabot
@@ -132,7 +132,7 @@ repos:
   # 5. PYTHON — stacks/python/
   # ---------------------------------------------------------------------------
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.1
+    rev: v0.16.2
     hooks:
       # `ruff-check` is the current id. The old `ruff` id still exists as a
       # deprecated alias, so autoupdate will not warn you about it.

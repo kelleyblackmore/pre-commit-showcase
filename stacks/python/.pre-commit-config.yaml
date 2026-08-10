@@ -30,7 +30,7 @@ repos:
   # the formatter gets the last word on layout.
   # ---------------------------------------------------------------------------
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.1
+    rev: v0.16.2
     hooks:
       # `ruff-check` is the current id; plain `ruff` survives as a deprecated
       # alias, so `autoupdate` will happily leave you on it forever.
