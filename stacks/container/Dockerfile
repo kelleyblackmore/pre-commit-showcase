@@ -17,7 +17,7 @@
 # Renovate and Dependabot both understand and bump that form.
 
 # ---------- build stage -------------------------------------------------------
-FROM python:3.14.0-alpine3.21 AS builder
+FROM python:3.14.1-alpine3.21 AS builder
 
 WORKDIR /build
 
@@ -28,7 +28,7 @@ COPY app/ ./app/
 RUN python -m compileall -q ./app
 
 # ---------- runtime stage -----------------------------------------------------
-FROM python:3.14.0-alpine3.21 AS runtime
+FROM python:3.14.1-alpine3.21 AS runtime
 
 # hadolint DL4006: without this, a failure in the left side of a pipe is silently
 # swallowed for every RUN below.
